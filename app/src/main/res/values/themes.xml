@@ -18,6 +18,7 @@
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowAnimationStyle">@null</item>
         <item name="android:alertDialogTheme">@style/EinkDialog</item>
+        <item name="android:datePickerDialogTheme">@style/EinkDialog</item>
     </style>
 
     <style name="EinkDialog" parent="android:Theme.Material.Light.Dialog.Alert">

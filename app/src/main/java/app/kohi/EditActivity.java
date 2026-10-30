@@ -2,6 +2,7 @@ package app.kohi;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
@@ -13,6 +14,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -26,7 +28,8 @@ public class EditActivity extends Activity {
     private String initial = "";
 
     private EditText url, name, roaster, origin, region, altitude, process, variety, producer, notes;
-    private EditText method, temp, grind, dose, water, time, myNotes;
+    private EditText method, temp, grind, dose, water, time, myNotes, bag, price;
+    private DateField opened, finished;
     private TextView status, fetchButton;
     private ScrollView scroll;
 
@@ -142,6 +145,15 @@ public class EditActivity extends Activity {
         water.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         pair(body, "Coffee (g)", dose, "Water (g)", water);
 
+        body.addView(Ui.header(this, "The bag"), Ui.wide());
+        bag = Ui.field(this, "250");
+        bag.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        price = Ui.field(this, "10,90");
+        price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        pair(body, "Bag size (g)", bag, "Price (€)", price);
+        opened = new DateField(body, "Opened");
+        finished = new DateField(body, "Finished");
+
         body.addView(Ui.header(this, "My notes"), Ui.wide());
         label(body, "Rating");
         LinearLayout ratingRow = Ui.row(this);
@@ -226,6 +238,10 @@ public class EditActivity extends Activity {
         water.setText(bean.water);
         time.setText(bean.time);
         myNotes.setText(bean.myNotes);
+        bag.setText(bean.bag);
+        price.setText(bean.price);
+        opened.set(bean.opened);
+        finished.set(bean.finishedOn);
         setRoast(bean.roast);
         setRating(bean.rating);
     }
@@ -252,6 +268,10 @@ public class EditActivity extends Activity {
         bean.water = val(water);
         bean.time = val(time);
         bean.myNotes = val(myNotes);
+        bean.bag = val(bag);
+        bean.price = val(price);
+        bean.opened = opened.value;
+        bean.setFinished(finished.value);
         bean.roast = roast;
         bean.rating = rating;
     }
@@ -259,10 +279,11 @@ public class EditActivity extends Activity {
     private String snapshot() {
         StringBuilder s = new StringBuilder();
         for (EditText e : new EditText[]{url, name, roaster, origin, region, altitude, process,
-                variety, producer, notes, method, temp, grind, dose, water, time, myNotes}) {
+                variety, producer, notes, method, temp, grind, dose, water, time, myNotes, bag, price}) {
             s.append(val(e)).append('\u0001');
         }
-        return s.append(roast).append('\u0001').append(rating).toString();
+        return s.append(roast).append('\u0001').append(rating).append('\u0001')
+                .append(opened.value).append('\u0001').append(finished.value).toString();
     }
 
     private void save() {
@@ -270,6 +291,11 @@ public class EditActivity extends Activity {
             say("Give the coffee a name first.");
             scroll.scrollTo(0, 0);
             name.requestFocus();
+            return;
+        }
+        if (opened.value > 0 && finished.value > 0
+                && Bean.date(finished.value).isBefore(Bean.date(opened.value))) {
+            say("The bag is finished before it was opened. Check the two dates.");
             return;
         }
         collect();
@@ -296,6 +322,41 @@ public class EditActivity extends Activity {
                 .setPositiveButton("Leave", (d, w) -> finish())
                 .setNegativeButton("Keep editing", null)
                 .show();
+    }
+
+    /** A date you set with a calendar, or Today, and can clear again. */
+    private final class DateField {
+        long value = 0;
+        private final TextView shown;
+        private final TextView clear;
+
+        DateField(LinearLayout body, String title) {
+            label(body, title);
+            LinearLayout row = Ui.row(EditActivity.this);
+            shown = Ui.pill(EditActivity.this, "", false, 16);
+            shown.setOnClickListener(v -> pick());
+            row.addView(shown, Ui.weight(1));
+            TextView today = Ui.pill(EditActivity.this, "Today", false, 16);
+            today.setOnClickListener(v -> set(Bean.today()));
+            row.addView(today, Ui.gapLeft(EditActivity.this, Ui.wrap(), 8));
+            clear = Ui.pill(EditActivity.this, "Clear", false, 16);
+            clear.setOnClickListener(v -> set(0));
+            row.addView(clear, Ui.gapLeft(EditActivity.this, Ui.wrap(), 8));
+            body.addView(row, Ui.wide());
+        }
+
+        void set(long day) {
+            value = day;
+            shown.setText(day > 0 ? Store.day(day) : "Choose a date");
+            clear.setVisibility(day > 0 ? View.VISIBLE : View.GONE);
+        }
+
+        void pick() {
+            LocalDate d = value > 0 ? Bean.date(value) : LocalDate.now();
+            new DatePickerDialog(EditActivity.this,
+                    (picker, y, m, dayOfMonth) -> set(Bean.noon(LocalDate.of(y, m + 1, dayOfMonth))),
+                    d.getYear(), d.getMonthValue() - 1, d.getDayOfMonth()).show();
+        }
     }
 
     // ---- reading the page -----------------------------------------------------------------

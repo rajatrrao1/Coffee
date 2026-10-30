@@ -10,9 +10,15 @@ dose, ratio, time).
   tasting notes it can find, fills only empty fields, and tells you what the page
   did not say. Check the fields before saving.
 - **Your brew** sits at the top of each coffee's screen, for reading at the kettle.
+- **The bag**: its size and price, the day you opened it and the day it ran out.
+  Each coffee shows how long the bag lasted and about how many grams a day you drank.
+  **Add another bag of this coffee** starts a fresh bag with the same details.
 - **Filter** by roast, or show finished bags. **Search** looks through everything.
-- **Backup** saves all beans to one JSON file, brings them back in, or sends the
-  list as text.
+- **More** shows how much coffee you bought this year and in all, what it cost, how
+  long a bag lasts on average and how much you drink a day.
+- **Backup folder**: choose a folder once (under More) and the app keeps
+  `coffee-beans.json` there, updated after every change, so your beans survive even
+  removing the app. It can also bring beans in from that file, or send the list as text.
 
 Everything stays on the phone. The only network use is fetching a page you asked for.
 

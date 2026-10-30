@@ -75,6 +75,18 @@ public class BeanActivity extends Activity {
             line(body, "Brew time", b.time);
         }
 
+        // The bag: how much, when it was opened and finished, how long it lasted.
+        body.addView(Ui.header(this, "The bag"), Ui.wide());
+        int bagLines = 0;
+        bagLines += line(body, "Bag", b.bagLabel());
+        bagLines += line(body, "Opened", b.opened > 0 ? Store.day(b.opened) : "");
+        bagLines += line(body, "Finished", b.finishedOn > 0 ? Store.day(b.finishedOn) : "");
+        bagLines += line(body, b.finishedOn > 0 ? "Lasted" : "Open for", b.lasted());
+        if (bagLines == 0) {
+            body.addView(Ui.italic(this, "Press Opened the bag today when you start it, and Mark "
+                    + "the bag as finished when it runs out.", 16), Ui.wide());
+        }
+
         body.addView(Ui.header(this, "The bean"), Ui.wide());
         int shown = 0;
         shown += line(body, "Origin", b.origin);
@@ -110,13 +122,33 @@ public class BeanActivity extends Activity {
             });
             actions.addView(open, Ui.gapBelow(this, Ui.wide(), 10));
         }
-        TextView done = Ui.pill(this, b.finished ? "Back in rotation" : "Mark the bag as finished", false, 16);
+        if (b.opened <= 0 && !b.finished) {
+            TextView open = Ui.pill(this, "Opened the bag today", true, 16);
+            open.setOnClickListener(v -> {
+                b.opened = Bean.today();
+                Store.save(this, b);
+                build(b);
+            });
+            actions.addView(open, Ui.gapBelow(this, Ui.wide(), 10));
+        }
+        TextView done = Ui.pill(this, b.finished ? "Not finished after all" : "Mark the bag as finished", false, 16);
         done.setOnClickListener(v -> {
-            b.finished = !b.finished;
+            b.setFinished(b.finished ? 0 : Bean.today());
             Store.save(this, b);
             build(b);
         });
         actions.addView(done, Ui.gapBelow(this, Ui.wide(), 10));
+        TextView again = Ui.pill(this, "Add another bag of this coffee", false, 16);
+        again.setOnClickListener(v -> {
+            Bean next = b.anotherBag();
+            Store.save(this, next);
+            Toast.makeText(this, "Added a new bag. Its dates start empty.", Toast.LENGTH_LONG).show();
+            Intent i = new Intent(this, BeanActivity.class);
+            i.putExtra("id", next.id);
+            startActivity(i);
+            finish();
+        });
+        actions.addView(again, Ui.gapBelow(this, Ui.wide(), 10));
         TextView delete = Ui.pill(this, "Delete", false, 16);
         delete.setOnClickListener(v -> new AlertDialog.Builder(this)
                 .setTitle("Delete " + (b.name.isEmpty() ? "this coffee" : b.name) + "?")

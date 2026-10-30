@@ -24,6 +24,10 @@
             android:name=".BeanActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".MoreActivity"
+            android:exported="false" />
+
         <!-- Shows up as "Add to Coffee" when you share a page from the browser. -->
         <activity
             android:name=".EditActivity"

@@ -1,10 +1,7 @@
 package app.kohi;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -15,21 +12,12 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends Activity {
 
-    private static final int REQ_SAVE = 1;
-    private static final int REQ_OPEN = 2;
     private static final String[] FILTERS = {"All", "Light", "Medium", "Dark", "Finished"};
 
     private String filter = "All";
@@ -104,9 +92,9 @@ public class MainActivity extends Activity {
         foot.setPadding(pad, Ui.dp(this, 8), pad, Ui.dp(this, 8));
         count = Ui.oneLine(Ui.text(this, "", 15));
         foot.addView(count, Ui.weight(1));
-        TextView backup = Ui.pill(this, "Backup", false, 16);
-        backup.setOnClickListener(v -> backupMenu());
-        foot.addView(backup, Ui.wrap());
+        TextView more = Ui.pill(this, "More", false, 16);
+        more.setOnClickListener(v -> startActivity(new Intent(this, MoreActivity.class)));
+        foot.addView(more, Ui.wrap());
         TextView add = Ui.pill(this, "+ Add", true, 16);
         add.setOnClickListener(v -> startActivity(new Intent(this, EditActivity.class)));
         foot.addView(add, Ui.gapLeft(this, Ui.wrap(), 8));
@@ -225,86 +213,5 @@ public class MainActivity extends Activity {
             card.addView(right, Ui.gapLeft(this, Ui.wrap(), 10));
         }
         return card;
-    }
-
-    // ---- backup ---------------------------------------------------------------------------
-
-    private void backupMenu() {
-        String[] items = {"Save all beans to a file", "Bring beans in from a file", "Send the list as text"};
-        new AlertDialog.Builder(this)
-                .setTitle("Backup")
-                .setItems(items, (d, which) -> {
-                    if (which == 0) saveFile();
-                    else if (which == 1) openFile();
-                    else sendText();
-                })
-                .setNegativeButton("Close", null)
-                .show();
-    }
-
-    private void saveFile() {
-        String day = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date());
-        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("application/json");
-        i.putExtra(Intent.EXTRA_TITLE, "coffee-beans-" + day + ".json");
-        try {
-            startActivityForResult(i, REQ_SAVE);
-        } catch (ActivityNotFoundException e) {
-            toast("This phone has no app for saving files.");
-        }
-    }
-
-    private void openFile() {
-        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("*/*");
-        try {
-            startActivityForResult(i, REQ_OPEN);
-        } catch (ActivityNotFoundException e) {
-            toast("This phone has no app for opening files.");
-        }
-    }
-
-    private void sendText() {
-        if (Store.all(this).isEmpty()) {
-            toast("There are no beans to send yet.");
-            return;
-        }
-        Intent i = new Intent(Intent.ACTION_SEND);
-        i.setType("text/plain");
-        i.putExtra(Intent.EXTRA_SUBJECT, "My coffee beans");
-        i.putExtra(Intent.EXTRA_TEXT, Store.asText(this));
-        startActivity(Intent.createChooser(i, "Send the list"));
-    }
-
-    @Override
-    protected void onActivityResult(int request, int result, Intent data) {
-        super.onActivityResult(request, result, data);
-        if (result != RESULT_OK || data == null || data.getData() == null) return;
-        Uri uri = data.getData();
-        if (request == REQ_SAVE) {
-            try (OutputStream out = getContentResolver().openOutputStream(uri, "w")) {
-                if (out == null) throw new java.io.IOException("no file");
-                out.write(Store.exportJson(this).getBytes(StandardCharsets.UTF_8));
-                int n = Store.all(this).size();
-                toast("Saved " + n + (n == 1 ? " bean." : " beans."));
-            } catch (Exception e) {
-                toast("Could not save the file: " + e.getMessage());
-            }
-        } else if (request == REQ_OPEN) {
-            try (InputStream in = getContentResolver().openInputStream(uri)) {
-                if (in == null) throw new java.io.IOException("no file");
-                int n = Store.importJson(this, Store.readAll(in));
-                toast("Brought in " + n + (n == 1 ? " bean." : " beans."));
-                render();
-            } catch (Exception e) {
-                toast("That file is not a Coffee backup.");
-            }
-        }
-    }
-
-    private void toast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 }

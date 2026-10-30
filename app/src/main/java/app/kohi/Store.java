@@ -120,6 +120,9 @@ public final class Store {
             String brew = Bean.joinDots(b.method, b.tempLabel(), b.grind, Bean.grams(b.dose),
                     b.ratio(), b.time);
             if (!brew.isEmpty()) s.append("Brew: ").append(brew).append('\n');
+            String bag = Bean.joinDots(b.bagLabel(), b.opened > 0 ? "opened " + day(b.opened) : "",
+                    b.finishedOn > 0 ? "finished " + day(b.finishedOn) : "", b.lasted());
+            if (!bag.isEmpty()) s.append("Bag: ").append(bag).append('\n');
             if (!b.myNotes.isEmpty()) s.append(b.myNotes).append('\n');
             if (!b.url.isEmpty()) s.append(b.url).append('\n');
             s.append('\n');
@@ -169,6 +172,7 @@ public final class Store {
         } catch (IOException | JSONException e) {
             throw new RuntimeException("Could not save the beans: " + e.getMessage(), e);
         }
+        Backup.changed(c);
     }
 
     public static String readAll(InputStream in) throws IOException {
