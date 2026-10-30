@@ -9,6 +9,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -38,10 +39,11 @@ public class MainActivity extends Activity {
         // Mark and search, as in the tea app.
         LinearLayout top = Ui.row(this);
         top.setPadding(pad, Ui.dp(this, 10), pad, Ui.dp(this, 8));
-        TextView mark = Ui.bold(this, "珈", 26);
-        mark.setTextColor(Ui.PAPER);
-        mark.setGravity(Gravity.CENTER);
-        mark.setBackground(Ui.box(this, true, 0, 6, false));
+        // The same two beans as the app icon.
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(R.drawable.mark);
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        mark.setContentDescription("Coffee");
         top.addView(mark, new LinearLayout.LayoutParams(Ui.dp(this, 46), Ui.dp(this, 46)));
 
         search = Ui.field(this, "Search name, origin, taste");
