@@ -117,8 +117,7 @@ public final class Store {
             String sub = b.subtitle();
             if (!sub.isEmpty()) s.append(sub).append('\n');
             if (!b.notes.isEmpty()) s.append(b.notes).append('\n');
-            String brew = Bean.joinDots(b.method, b.tempLabel(), b.grind, Bean.grams(b.dose),
-                    b.ratio(), b.time);
+            String brew = Methods.summary(b);
             if (!brew.isEmpty()) s.append("Brew: ").append(brew).append('\n');
             String bag = Bean.joinDots(b.bagLabel(), b.opened > 0 ? "opened " + day(b.opened) : "",
                     b.finishedOn > 0 ? "finished " + day(b.finishedOn) : "", b.lasted());

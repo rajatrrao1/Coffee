@@ -8,7 +8,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -33,7 +36,9 @@ public final class Bean {
     public String notes = "";      // the roaster's tasting notes
 
     // Your brew.
-    public String method = "";
+    public String method = "";     // one of Methods.ALL by name, or ""
+    public String brewer = "";     // the machine, dripper or pot: "V60", "Gaggia Classic"
+    public Map<String, String> extras = new LinkedHashMap<>(); // the method's own fields
     public String temp = "";
     public String grind = "";
     public String dose = "";
@@ -54,7 +59,8 @@ public final class Bean {
 
     /** No brew written down yet. */
     public boolean untried() {
-        return temp.trim().isEmpty() && grind.trim().isEmpty() && method.trim().isEmpty();
+        return temp.trim().isEmpty() && grind.trim().isEmpty() && method.trim().isEmpty()
+                && dose.trim().isEmpty();
     }
 
     /** "93" becomes "93 °C"; anything already carrying a unit is left alone. */
@@ -150,7 +156,8 @@ public final class Bean {
         Bean b = new Bean();
         b.name = name; b.roaster = roaster; b.url = url; b.origin = origin; b.region = region;
         b.altitude = altitude; b.process = process; b.variety = variety; b.producer = producer;
-        b.roast = roast; b.notes = notes; b.method = method; b.temp = temp; b.grind = grind;
+        b.roast = roast; b.notes = notes; b.method = method; b.brewer = brewer;
+        b.extras = new LinkedHashMap<>(extras); b.temp = temp; b.grind = grind;
         b.dose = dose; b.water = water; b.time = time; b.myNotes = myNotes; b.rating = rating;
         b.bag = bag; b.price = price;
         return b;
@@ -178,7 +185,8 @@ public final class Bean {
     public boolean matches(String query) {
         String hay = (name + " " + roaster + " " + origin + " " + region + " " + altitude + " "
                 + process + " " + variety + " " + producer + " " + roast + " " + notes + " "
-                + method + " " + grind + " " + myNotes).toLowerCase(Locale.ROOT);
+                + method + " " + brewer + " " + grind + " " + myNotes + " " + extras.values())
+                .toLowerCase(Locale.ROOT);
         for (String word : query.toLowerCase(Locale.ROOT).trim().split("\\s+")) {
             if (!word.isEmpty() && !hay.contains(word)) return false;
         }
@@ -200,6 +208,10 @@ public final class Bean {
         o.put("roast", roast);
         o.put("notes", notes);
         o.put("method", method);
+        o.put("brewer", brewer);
+        JSONObject ex = new JSONObject();
+        for (Map.Entry<String, String> e : extras.entrySet()) ex.put(e.getKey(), e.getValue());
+        o.put("extras", ex);
         o.put("temp", temp);
         o.put("grind", grind);
         o.put("dose", dose);
@@ -232,7 +244,22 @@ public final class Bean {
         b.producer = o.optString("producer", "");
         b.roast = o.optString("roast", "");
         b.notes = o.optString("notes", "");
-        b.method = o.optString("method", "");
+        String rawMethod = o.optString("method", "");
+        b.brewer = o.optString("brewer", "");
+        b.method = Methods.kindOf(rawMethod);
+        // Version 1 kept the dripper as the method ("V60"): it becomes Pour-over with V60 as brewer.
+        if (b.brewer.isEmpty() && !rawMethod.trim().isEmpty() && !rawMethod.trim().equalsIgnoreCase(b.method)) {
+            b.brewer = rawMethod.trim();
+        }
+        JSONObject ex = o.optJSONObject("extras");
+        if (ex != null) {
+            Iterator<String> keys = ex.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                String v = ex.optString(k, "");
+                if (!v.isEmpty()) b.extras.put(k, v);
+            }
+        }
         b.temp = o.optString("temp", "");
         b.grind = o.optString("grind", "");
         b.dose = o.optString("dose", "");

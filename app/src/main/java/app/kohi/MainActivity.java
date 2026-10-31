@@ -183,8 +183,9 @@ public class MainActivity extends Activity {
             line2.addView(Ui.badge(this, "Untried", false, true), Ui.gapLeft(this, Ui.wrap(), 6));
             badges++;
         }
-        if (!b.method.trim().isEmpty()) {
-            line2.addView(Ui.badge(this, b.method.trim(), false, false), Ui.gapLeft(this, Ui.wrap(), 6));
+        String brewTag = !b.brewer.trim().isEmpty() ? b.brewer.trim() : b.method;
+        if (!brewTag.isEmpty()) {
+            line2.addView(Ui.badge(this, brewTag, false, false), Ui.gapLeft(this, Ui.wrap(), 6));
             badges++;
         }
         if (b.rating > 0 && badges < 2) {
@@ -197,7 +198,13 @@ public class MainActivity extends Activity {
         }
         card.addView(left, Ui.weight(1));
 
-        String temp = b.tempLabel();
+        // Top right: what matters most for the method. Espresso: in → out. No kettle: the ratio.
+        Methods.Method m = Methods.get(b.method);
+        double d = Bean.firstNumber(b.dose), w = Bean.firstNumber(b.water);
+        String temp;
+        if (m == Methods.ESPRESSO && d > 0 && w > 0) temp = Methods.number(d) + " → " + Methods.number(w) + " g";
+        else if (!m.hasTemp && !b.method.isEmpty()) temp = b.ratio();
+        else temp = b.tempLabel();
         if (!temp.isEmpty() || !b.grind.trim().isEmpty()) {
             LinearLayout right = Ui.column(this);
             right.setGravity(Gravity.END);

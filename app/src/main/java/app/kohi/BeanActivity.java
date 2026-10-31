@@ -66,13 +66,19 @@ public class BeanActivity extends Activity {
             body.addView(Ui.italic(this, "Nothing written down yet. Press Edit to add the "
                     + "water temperature and grind once you have brewed it.", 16), Ui.wide());
         } else {
+            Methods.Method m = Methods.get(b.method);
             line(body, "Method", b.method);
-            line(body, "Water", b.tempLabel());
+            line(body, m.brewerLabel, b.brewer);
+            if (m.hasTemp) line(body, "Temperature", b.tempLabel());
             line(body, "Grind", b.grind);
             line(body, "Coffee", Bean.grams(b.dose));
-            line(body, "Water amount", Bean.grams(b.water));
+            line(body, Methods.plain(m.waterLabel), Bean.grams(b.water));
             line(body, "Ratio", b.ratio());
-            line(body, "Brew time", b.time);
+            line(body, Methods.plain(m.timeLabel), Methods.show(b.time, m.timeUnit));
+            for (Methods.Field f : m.extras) {
+                String v = b.extras.get(f.id);
+                if (v != null) line(body, Methods.plain(f.label), Methods.show(v, f.unit));
+            }
         }
 
         // The bag: how much, when it was opened and finished, how long it lasted.
