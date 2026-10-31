@@ -10,6 +10,11 @@ dose, ratio, time).
   tasting notes it can find, fills only empty fields, and tells you what the page
   did not say. Check the fields before saving.
 - **Your brew** sits at the top of each coffee's screen, for reading at the kettle.
+  Choose the method (espresso, pour-over, AeroPress, French press, moka pot, cold brew)
+  and the form shows what that method needs: for espresso the coffee in, the yield in
+  the cup and the shot time; for pour-over the bloom and the pours; for cold brew the
+  steep time in hours, and so on. Coffee, ratio and yield stay in step: 17 g at 1:2
+  fills in 34 g.
 - **The bag**: its size and price, the day you opened it and the day it ran out.
   Each coffee shows how long the bag lasted and about how many grams a day you drank.
   **Add another bag of this coffee** starts a fresh bag with the same details.
