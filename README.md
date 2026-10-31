@@ -1,6 +1,6 @@
 # 珈 Coffee
 
-A coffee bean log for the Mudita Kompakt, in the style of the tea app: each bag you
+A coffee bean log for the Mudita Kompakt: each bag you
 drink, where it is from, its altitude, and how you brew it (water temperature, grind,
 dose, ratio, time).
 
