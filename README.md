@@ -27,6 +27,12 @@ dose, ratio, time).
 
 Everything stays on the phone. The only network use is fetching a page you asked for.
 
+<img width="922" height="2048" alt="image" src="https://github.com/user-attachments/assets/d92cbfca-186b-49eb-bed0-e135a2de03d7" />
+<img width="480" height="800" alt="image" src="https://github.com/user-attachments/assets/a789ead9-eaa0-4147-9d0d-ed4801d5bfa9" />
+
+<img width="922" height="2048" alt="image" src="https://github.com/user-attachments/assets/6c34cce7-56c4-46bd-b6ae-f5a03d9be511" />
+
+
 ## Building
 
 GitHub builds it: every change pushed to this repository runs `.github/workflows/build.yml`,
