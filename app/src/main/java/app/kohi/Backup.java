@@ -140,18 +140,26 @@ public final class Backup {
         prefs(c).edit().putString(KEY_ERROR, error).apply();
     }
 
-    private static Uri findOrCreate(ContentResolver cr, Uri tree) throws Exception {
+    /** The file with this name directly in the chosen folder, or null. */
+    static Uri find(ContentResolver cr, Uri tree, String name) {
         String dirId = DocumentsContract.getTreeDocumentId(tree);
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, dirId);
         try (Cursor cur = cr.query(children, new String[]{
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                 DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
             while (cur != null && cur.moveToNext()) {
-                if (FILE_NAME.equals(cur.getString(1))) {
+                if (name.equals(cur.getString(1))) {
                     return DocumentsContract.buildDocumentUriUsingTree(tree, cur.getString(0));
                 }
             }
         }
+        return null;
+    }
+
+    private static Uri findOrCreate(ContentResolver cr, Uri tree) throws Exception {
+        Uri found = find(cr, tree, FILE_NAME);
+        if (found != null) return found;
+        String dirId = DocumentsContract.getTreeDocumentId(tree);
         Uri dir = DocumentsContract.buildDocumentUriUsingTree(tree, dirId);
         Uri made = DocumentsContract.createDocument(cr, dir, "application/json", FILE_NAME);
         if (made == null) throw new Exception("Could not make " + FILE_NAME + " in that folder.");

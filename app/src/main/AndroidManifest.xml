@@ -28,6 +28,11 @@
             android:name=".MoreActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".BrewActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
         <!-- Shows up as "Add to Coffee" when you share a page from the browser. -->
         <activity
             android:name=".EditActivity"

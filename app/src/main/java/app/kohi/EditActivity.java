@@ -2,14 +2,10 @@ package app.kohi;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.InputType;
-import android.text.TextWatcher;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
@@ -17,12 +13,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,12 +26,8 @@ public class EditActivity extends Activity {
     private String initial = "";
 
     private EditText url, name, roaster, origin, region, altitude, process, variety, producer, notes;
-    private EditText brewer, temp, grind, dose, ratio, water, time, myNotes, bag, price;
-    private String method = "";
-    private final Map<String, String> extraValues = new LinkedHashMap<>();
-    private final List<TextView> methodChips = new ArrayList<>();
-    private LinearLayout brewBox;
-    private boolean syncing;
+    private EditText myNotes, bag, price;
+    private BrewForm recipe;
     private DateField opened, finished;
     private TextView status, fetchButton;
     private ScrollView scroll;
@@ -128,30 +116,11 @@ public class EditActivity extends Activity {
         }
         body.addView(roastRow, Ui.wide());
 
-        body.addView(Ui.header(this, "My brew"), Ui.wide());
-        label(body, "Method");
-        LinearLayout methodRow = Ui.row(this);
-        for (Methods.Method m : Methods.ALL) {
-            TextView chip = Ui.pill(this, m.name, false, 16);
-            chip.setOnClickListener(v -> chooseMethod(method.equals(m.name) ? "" : m.name));
-            methodChips.add(chip);
-            methodRow.addView(chip, Ui.gapLeft(this, Ui.wrap(), methodChips.size() == 1 ? 0 : 8));
-        }
-        body.addView(sideways(methodRow), Ui.wide());
-
-        // These fields belong to every method; chooseMethod() places them with the right labels.
-        brewer = Ui.field(this, "");
-        temp = numberField("");
-        grind = Ui.field(this, "e.g. 22 clicks, medium-fine");
-        dose = numberField("");
-        ratio = numberField("");
-        water = numberField("");
-        time = Ui.field(this, "");
-        dose.addTextChangedListener(after(this::doseChanged));
-        ratio.addTextChangedListener(after(this::ratioChanged));
-        water.addTextChangedListener(after(this::waterChanged));
-        brewBox = Ui.column(this);
-        body.addView(brewBox, Ui.wide());
+        body.addView(Ui.header(this, "My recipe"), Ui.wide());
+        body.addView(Ui.italic(this, "Your usual way of brewing this coffee. Each brew you log "
+                + "on the coffee's screen starts from your last one.", 15), Ui.wide());
+        recipe = new BrewForm(this);
+        body.addView(recipe.view(), Ui.wide());
 
         body.addView(Ui.header(this, "The bag"), Ui.wide());
         bag = Ui.field(this, "250");
@@ -159,8 +128,8 @@ public class EditActivity extends Activity {
         price = Ui.field(this, "10,90");
         price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         pair(body, "Bag size (g)", bag, "Price (€)", price);
-        opened = new DateField(body, "Opened");
-        finished = new DateField(body, "Finished");
+        opened = new DateField(this, body, "Opened", true);
+        finished = new DateField(this, body, "Finished", true);
 
         body.addView(Ui.header(this, "My notes"), Ui.wide());
         label(body, "Rating");
@@ -229,152 +198,6 @@ public class EditActivity extends Activity {
         return e;
     }
 
-    // ---- the brew, shaped by the method ---------------------------------------------------
-
-    private void chooseMethod(String name) {
-        method = name;
-        for (TextView chip : methodChips) Ui.setPill(this, chip, chip.getText().toString().equals(name));
-        layoutBrew(Methods.get(name));
-    }
-
-    private static void detach(View v) {
-        if (v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
-    }
-
-    private void layoutBrew(Methods.Method m) {
-        for (View v : new View[]{brewer, temp, grind, dose, ratio, water, time}) detach(v);
-        brewBox.removeAllViews();
-
-        if (!method.isEmpty() && !m.tip.isEmpty()) {
-            TextView tip = Ui.italic(this, m.tip, 15);
-            tip.setPadding(0, Ui.dp(this, 10), 0, 0);
-            brewBox.addView(tip, Ui.wide());
-        }
-
-        brewer.setHint(m.brewerHint);
-        labeled(brewBox, m.brewerLabel, brewer);
-        if (m.brewers.length > 0) {
-            LinearLayout row = Ui.row(this);
-            for (int i = 0; i < m.brewers.length; i++) {
-                String b = m.brewers[i];
-                TextView chip = Ui.pill(this, b, false, 15);
-                chip.setOnClickListener(v -> brewer.setText(b));
-                row.addView(chip, Ui.gapLeft(this, Ui.wrap(), i == 0 ? 0 : 8));
-            }
-            brewBox.addView(sideways(row), Ui.wide());
-        }
-
-        dose.setHint(m.doseHint);
-        water.setHint(m.waterHint);
-        ratio.setHint(Methods.number(Bean.firstNumber(m.waterHint) / Bean.firstNumber(m.doseHint)));
-        columns(brewBox, new String[]{"Coffee (g)", "Ratio 1 :", m.waterLabel}, new EditText[]{dose, ratio, water});
-        if (m.ratios.length > 0) {
-            LinearLayout row = Ui.row(this);
-            for (int i = 0; i < m.ratios.length; i++) {
-                String r = m.ratios[i];
-                TextView chip = Ui.pill(this, r, false, 15);
-                chip.setOnClickListener(v -> ratio.setText(r.substring(r.indexOf(':') + 1)));
-                row.addView(chip, Ui.gapLeft(this, Ui.wrap(), i == 0 ? 0 : 8));
-            }
-            LinearLayout.LayoutParams lp = Ui.wide();
-            lp.topMargin = Ui.dp(this, 8);
-            brewBox.addView(sideways(row), lp);
-        }
-
-        temp.setHint(m.tempHint);
-        time.setHint(m.timeHint);
-        time.setInputType(m.timeUnit.isEmpty() ? InputType.TYPE_CLASS_TEXT
-                : InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        if (m.hasTemp) pair(brewBox, "Water temperature (°C)", temp, m.timeLabel, time);
-        else labeled(brewBox, m.timeLabel, time);
-        labeled(brewBox, "Grind", grind);
-
-        List<Methods.Field> fields = m.extras;
-        for (int i = 0; i < fields.size(); i++) {
-            Methods.Field f = fields.get(i);
-            if (f.kind == Methods.CHOICE) {
-                choiceRow(f);
-            } else if (f.kind == Methods.NUMBER && i + 1 < fields.size() && fields.get(i + 1).kind == Methods.NUMBER) {
-                Methods.Field g = fields.get(i + 1);
-                pair(brewBox, f.label, extraField(f), g.label, extraField(g));
-                i++;
-            } else {
-                labeled(brewBox, f.label, extraField(f));
-            }
-        }
-    }
-
-    private EditText extraField(Methods.Field f) {
-        EditText e = f.kind == Methods.NUMBER ? numberField(f.hint) : Ui.field(this, f.hint);
-        String v = extraValues.get(f.id);
-        e.setText(v == null ? "" : v);
-        e.addTextChangedListener(after(() -> {
-            String t = val(e);
-            if (t.isEmpty()) extraValues.remove(f.id);
-            else extraValues.put(f.id, t);
-        }));
-        return e;
-    }
-
-    private void choiceRow(Methods.Field f) {
-        label(brewBox, f.label);
-        LinearLayout row = Ui.row(this);
-        List<TextView> chips = new ArrayList<>();
-        for (int i = 0; i < f.choices.length; i++) {
-            String c = f.choices[i];
-            TextView chip = Ui.pill(this, c, c.equals(extraValues.get(f.id)), 15);
-            chip.setOnClickListener(v -> {
-                if (c.equals(extraValues.get(f.id))) extraValues.remove(f.id);
-                else extraValues.put(f.id, c);
-                for (TextView t : chips) Ui.setPill(this, t, t.getText().toString().equals(extraValues.get(f.id)));
-            });
-            chips.add(chip);
-            row.addView(chip, Ui.gapLeft(this, Ui.wrap(), i == 0 ? 0 : 8));
-        }
-        brewBox.addView(sideways(row), Ui.wide());
-    }
-
-    // Coffee, ratio and yield stay in step: change the coffee or the ratio and the yield follows;
-    // type a yield and the ratio follows.
-
-    private void doseChanged() {
-        double d = num(dose), r = num(ratio), w = num(water);
-        if (d > 0 && r > 0) quietly(water, Methods.number(d * r));
-        else if (d > 0 && w > 0) quietly(ratio, Methods.number(w / d));
-    }
-
-    private void ratioChanged() {
-        double d = num(dose), r = num(ratio);
-        if (d > 0 && r > 0) quietly(water, Methods.number(d * r));
-    }
-
-    private void waterChanged() {
-        double d = num(dose), w = num(water);
-        if (d > 0 && w > 0) quietly(ratio, Methods.number(w / d));
-    }
-
-    private void quietly(EditText e, String value) {
-        if (val(e).equals(value)) return;
-        syncing = true;
-        e.setText(value);
-        syncing = false;
-    }
-
-    private static double num(EditText e) {
-        return Bean.firstNumber(val(e));
-    }
-
-    /** A text watcher that runs after each edit, except while the form fills itself in. */
-    private TextWatcher after(Runnable r) {
-        return new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void afterTextChanged(Editable s) {
-                if (!syncing) r.run();
-            }
-        };
-    }
-
     private void setRoast(String r) {
         roast = r;
         for (TextView chip : roastChips) Ui.setPill(this, chip, chip.getText().toString().equals(r));
@@ -403,19 +226,7 @@ public class EditActivity extends Activity {
         variety.setText(bean.variety);
         producer.setText(bean.producer);
         notes.setText(bean.notes);
-        syncing = true;
-        brewer.setText(bean.brewer);
-        temp.setText(bean.temp);
-        grind.setText(bean.grind);
-        dose.setText(bean.dose);
-        water.setText(bean.water);
-        String r = bean.ratio();
-        ratio.setText(r.isEmpty() ? "" : r.substring(2));
-        time.setText(bean.time);
-        syncing = false;
-        extraValues.clear();
-        extraValues.putAll(bean.extras);
-        chooseMethod(bean.method);
+        recipe.load(bean.recipe());
         myNotes.setText(bean.myNotes);
         bag.setText(bean.bag);
         price.setText(bean.price);
@@ -440,15 +251,9 @@ public class EditActivity extends Activity {
         bean.variety = val(variety);
         bean.producer = val(producer);
         bean.notes = val(notes);
-        bean.method = method;
-        bean.brewer = val(brewer);
-        bean.extras = new LinkedHashMap<>(extraValues);
-        Methods.keepOnly(bean.extras, Methods.get(method));
-        bean.temp = val(temp);
-        bean.grind = val(grind);
-        bean.dose = val(dose);
-        bean.water = val(water);
-        bean.time = val(time);
+        Brew r = new Brew();
+        recipe.into(r);
+        bean.setRecipe(r);
         bean.myNotes = val(myNotes);
         bean.bag = val(bag);
         bean.price = val(price);
@@ -461,12 +266,10 @@ public class EditActivity extends Activity {
     private String snapshot() {
         StringBuilder s = new StringBuilder();
         for (EditText e : new EditText[]{url, name, roaster, origin, region, altitude, process,
-                variety, producer, notes, brewer, temp, grind, dose, water, time, myNotes, bag, price}) {
+                variety, producer, notes, myNotes, bag, price}) {
             s.append(val(e)).append('\u0001');
         }
-        Map<String, String> extras = new TreeMap<>(extraValues);
-        Methods.keepOnly(extras, Methods.get(method));
-        s.append(method).append('\u0001').append(extras).append('\u0001');
+        s.append(recipe.snapshot()).append('\u0001');
         return s.append(roast).append('\u0001').append(rating).append('\u0001')
                 .append(opened.value).append('\u0001').append(finished.value).toString();
     }
@@ -507,41 +310,6 @@ public class EditActivity extends Activity {
                 .setPositiveButton("Leave", (d, w) -> finish())
                 .setNegativeButton("Keep editing", null)
                 .show();
-    }
-
-    /** A date you set with a calendar, or Today, and can clear again. */
-    private final class DateField {
-        long value = 0;
-        private final TextView shown;
-        private final TextView clear;
-
-        DateField(LinearLayout body, String title) {
-            label(body, title);
-            LinearLayout row = Ui.row(EditActivity.this);
-            shown = Ui.pill(EditActivity.this, "", false, 16);
-            shown.setOnClickListener(v -> pick());
-            row.addView(shown, Ui.weight(1));
-            TextView today = Ui.pill(EditActivity.this, "Today", false, 16);
-            today.setOnClickListener(v -> set(Bean.today()));
-            row.addView(today, Ui.gapLeft(EditActivity.this, Ui.wrap(), 8));
-            clear = Ui.pill(EditActivity.this, "Clear", false, 16);
-            clear.setOnClickListener(v -> set(0));
-            row.addView(clear, Ui.gapLeft(EditActivity.this, Ui.wrap(), 8));
-            body.addView(row, Ui.wide());
-        }
-
-        void set(long day) {
-            value = day;
-            shown.setText(day > 0 ? Store.day(day) : "Choose a date");
-            clear.setVisibility(day > 0 ? View.VISIBLE : View.GONE);
-        }
-
-        void pick() {
-            LocalDate d = value > 0 ? Bean.date(value) : LocalDate.now();
-            new DatePickerDialog(EditActivity.this,
-                    (picker, y, m, dayOfMonth) -> set(Bean.noon(LocalDate.of(y, m + 1, dayOfMonth))),
-                    d.getYear(), d.getMonthValue() - 1, d.getDayOfMonth()).show();
-        }
     }
 
     // ---- reading the page -----------------------------------------------------------------

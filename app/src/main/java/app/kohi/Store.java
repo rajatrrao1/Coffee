@@ -55,6 +55,12 @@ public final class Store {
         write(c);
     }
 
+    /** Writes every bean, after changes made to several at once. */
+    public static synchronized void saveAll(Context c) {
+        all(c);
+        write(c);
+    }
+
     public static synchronized void delete(Context c, String id) {
         List<Bean> list = all(c);
         for (int i = list.size() - 1; i >= 0; i--) {
@@ -117,11 +123,17 @@ public final class Store {
             String sub = b.subtitle();
             if (!sub.isEmpty()) s.append(sub).append('\n');
             if (!b.notes.isEmpty()) s.append(b.notes).append('\n');
-            String brew = Methods.summary(b);
+            String brew = Methods.summary(b.recipe());
             if (!brew.isEmpty()) s.append("Brew: ").append(brew).append('\n');
             String bag = Bean.joinDots(b.bagLabel(), b.opened > 0 ? "opened " + day(b.opened) : "",
                     b.finishedOn > 0 ? "finished " + day(b.finishedOn) : "", b.lasted());
             if (!bag.isEmpty()) s.append("Bag: ").append(bag).append('\n');
+            if (!b.brews.isEmpty()) {
+                double avg = b.averageRating();
+                s.append("Brews: ").append(b.brews.size())
+                        .append(avg > 0 ? String.format(Locale.getDefault(), ", average %.1f stars", avg) : "")
+                        .append('\n');
+            }
             if (!b.myNotes.isEmpty()) s.append(b.myNotes).append('\n');
             if (!b.url.isEmpty()) s.append(b.url).append('\n');
             s.append('\n');

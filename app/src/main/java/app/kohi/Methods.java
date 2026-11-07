@@ -216,7 +216,7 @@ final class Methods {
     }
 
     /** The brew as one line, for the shared text list. */
-    static String summary(Bean b) {
+    static String summary(Brew b) {
         Method m = get(b.method);
         List<String> parts = new ArrayList<>();
         parts.add(Bean.joinDots(b.method, b.brewer));
@@ -233,7 +233,7 @@ final class Methods {
     }
 
     /** "18 → 36 g (1:2)", or what is known of it. */
-    static String amounts(Bean b) {
+    static String amounts(Brew b) {
         double d = Bean.firstNumber(b.dose), w = Bean.firstNumber(b.water);
         if (d > 0 && w > 0) return number(d) + " → " + number(w) + " g (" + b.ratio() + ")";
         if (d > 0) return number(d) + " g";

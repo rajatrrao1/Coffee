@@ -1,6 +1,6 @@
 # 珈 Coffee
 
-A coffee bean log for the Mudita Kompakt: each bag you
+A coffee bean log for the Mudita Kompakt, in the style of the tea app: each bag you
 drink, where it is from, its altitude, and how you brew it (water temperature, grind,
 dose, ratio, time).
 
@@ -15,6 +15,10 @@ dose, ratio, time).
   the cup and the shot time; for pour-over the bloom and the pours; for cold brew the
   steep time in hours, and so on. Coffee, ratio and yield stay in step: 17 g at 1:2
   fills in 34 g.
+- **Brew log**: press **+ Log a brew** on a coffee each time you make it. It starts
+  from your last brew, dated today; change what you did differently, rate it and add a
+  note. The coffee's screen lists your brews by day, newest first; tap one to see or
+  change it. The first brew also dates the day the bag was opened.
 - **The bag**: its size and price, the day you opened it and the day it ran out.
   Each coffee shows how long the bag lasted and about how many grams a day you drank.
   **Add another bag of this coffee** starts a fresh bag with the same details.
@@ -25,13 +29,17 @@ dose, ratio, time).
   `coffee-beans.json` there, updated after every change, so your beans survive even
   removing the app. It can also bring beans in from that file, or send the list as text.
 
+## Brews from Two Tone
+
+The Two Tone launcher writes the brews it logs to `coffee-brews.json` in the backup folder.
+Coffee reads that file (it never writes it) whenever the app opens, or from More, and adds
+each brew to its coffee's log: matched by `beanId`, else by `beanName`; `date` sets the day,
+`time` the time of day. In `coffee-beans.json` such a brew has the id `tt-<its Two Tone id>`,
+`"source": "Two Tone"` and `"sourceId": "<its Two Tone id>"`, so Two Tone can tell which of
+its brews Coffee already has. A brew you change in Coffee keeps your change; a brew you
+delete in Coffee is not brought in again.
+
 Everything stays on the phone. The only network use is fetching a page you asked for.
-
-<img width="922" height="2048" alt="image" src="https://github.com/user-attachments/assets/d92cbfca-186b-49eb-bed0-e135a2de03d7" />
-<img width="480" height="800" alt="image" src="https://github.com/user-attachments/assets/a789ead9-eaa0-4147-9d0d-ed4801d5bfa9" />
-
-<img width="922" height="2048" alt="image" src="https://github.com/user-attachments/assets/6c34cce7-56c4-46bd-b6ae-f5a03d9be511" />
-
 
 ## Building
 

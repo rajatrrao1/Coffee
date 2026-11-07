@@ -47,6 +47,7 @@ public class MoreActivity extends Activity {
         body.setPadding(pad, Ui.dp(this, 4), pad, Ui.dp(this, 28));
         totals(body);
         backup(body);
+        twoTone(body);
         root.addView(Ui.scroller(this, body), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1f));
         setContentView(root);
     }
@@ -91,6 +92,21 @@ public class MoreActivity extends Activity {
         }
         line(body, "This year", summary(bagsYear, gramsYear, moneyYear));
         line(body, "All time", summary(bagsAll, gramsAll, moneyAll));
+        int brewsYear = 0, brewsAll = 0;
+        double brewedYear = 0;
+        for (Bean b : all) {
+            for (Brew r : b.brews) {
+                brewsAll++;
+                if (Bean.date(r.at).getYear() == year) {
+                    brewsYear++;
+                    brewedYear += Bean.firstNumber(r.dose);
+                }
+            }
+        }
+        if (brewsAll > 0) {
+            line(body, "Brews logged", Bean.joinDots(brewsYear + " this year", brewsAll + " in all"));
+            if (brewedYear > 0) line(body, "Brewed", weight(brewedYear) + " of coffee this year");
+        }
         if (bagsFinished > 0) {
             line(body, "A bag lasts", Math.round((double) daysFinished / bagsFinished) + " days on average");
         }
@@ -105,9 +121,13 @@ public class MoreActivity extends Activity {
         }
     }
 
-    private static String summary(int bags, double grams, double money) {
-        String g = grams <= 0 ? "" : grams < 1000 ? Math.round(grams) + " g"
+    private static String weight(double grams) {
+        return grams < 1000 ? Math.round(grams) + " g"
                 : String.format(Locale.getDefault(), "%.2f kg", grams / 1000);
+    }
+
+    private static String summary(int bags, double grams, double money) {
+        String g = grams <= 0 ? "" : weight(grams);
         String m = money <= 0 ? "" : String.format(Locale.getDefault(), "€ %.2f", money);
         return Bean.joinDots(bags + (bags == 1 ? " bag" : " bags"), g, m);
     }
@@ -154,6 +174,33 @@ public class MoreActivity extends Activity {
                 build();
             });
         }
+        body.addView(actions, Ui.wide());
+    }
+
+    // ---- Two Tone -------------------------------------------------------------------------
+
+    private void twoTone(LinearLayout body) {
+        body.addView(Ui.header(this, "Two Tone"), Ui.wide());
+        body.addView(Ui.text(this, "Brews you log in the Two Tone launcher are read from "
+                + TwoTone.FILE_NAME + " in the backup folder, and join the brew log of their "
+                + "coffee. Coffee only reads that file; it never changes it.", 16), Ui.wide());
+        if (Backup.folder(this) == null) {
+            TextView t = Ui.italic(this, "Choose a backup folder above first, the same one Two Tone uses.", 15);
+            t.setPadding(0, Ui.dp(this, 8), 0, 0);
+            body.addView(t, Ui.wide());
+            return;
+        }
+        LinearLayout box = Ui.column(this);
+        box.setPadding(0, Ui.dp(this, 12), 0, 0);
+        String status = TwoTone.status(this);
+        long when = TwoTone.lastRead(this);
+        if (!status.isEmpty()) line(box, "Last read", new SimpleDateFormat("d MMM, HH:mm",
+                Locale.getDefault()).format(new Date(when)));
+        if (!status.isEmpty()) line(box, "Result", status);
+        body.addView(box, Ui.wide());
+        LinearLayout actions = Ui.column(this);
+        actions.setPadding(0, Ui.dp(this, 10), 0, 0);
+        button(actions, "Read Two Tone's brews now", false, () -> TwoTone.sync(this, true, this::build));
         body.addView(actions, Ui.wide());
     }
 

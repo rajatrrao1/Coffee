@@ -109,6 +109,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         render();
+        TwoTone.sync(this, false, this::render);
     }
 
     private void render() {
@@ -190,6 +191,9 @@ public class MainActivity extends Activity {
         }
         if (b.rating > 0 && badges < 2) {
             line2.addView(Ui.badge(this, "★ " + b.rating, true, false), Ui.gapLeft(this, Ui.wrap(), 6));
+        } else if (!b.brews.isEmpty() && badges < 2) {
+            line2.addView(Ui.badge(this, b.brews.size() + (b.brews.size() == 1 ? " brew" : " brews"), true, false),
+                    Ui.gapLeft(this, Ui.wrap(), 6));
         }
         left.addView(line2, Ui.wide());
 

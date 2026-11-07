@@ -1,5 +1,6 @@
 package app.kohi;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -54,18 +55,25 @@ public final class Bean {
     public long opened = 0;        // day the bag was opened, 0 = not yet
     public long finishedOn = 0;    // day it ran out, 0 = still going
 
+    // Every brew you logged of this bag, newest first.
+    public List<Brew> brews = new ArrayList<>();
+
     public long added = System.currentTimeMillis();
     public long updated = added;
 
     /** No brew written down yet. */
     public boolean untried() {
         return temp.trim().isEmpty() && grind.trim().isEmpty() && method.trim().isEmpty()
-                && dose.trim().isEmpty();
+                && dose.trim().isEmpty() && brews.isEmpty();
     }
 
     /** "93" becomes "93 °C"; anything already carrying a unit is left alone. */
     public String tempLabel() {
-        String t = temp.trim();
+        return tempOf(temp);
+    }
+
+    static String tempOf(String temp) {
+        String t = temp == null ? "" : temp.trim();
         if (t.isEmpty()) return "";
         if (t.matches("[0-9.,\\s–-]+")) return t + " °C";
         return t;
@@ -80,11 +88,13 @@ public final class Bean {
 
     /** 15 g of coffee to 250 g of water gives "1:16.7". */
     public String ratio() {
+        return ratioOf(dose, water);
+    }
+
+    static String ratioOf(String dose, String water) {
         double d = firstNumber(dose), w = firstNumber(water);
         if (d <= 0 || w <= 0) return "";
-        double r = Math.round(w / d * 10.0) / 10.0;
-        String s = (r == Math.floor(r)) ? String.valueOf((long) r) : String.valueOf(r);
-        return "1:" + s;
+        return "1:" + Methods.number(w / d);
     }
 
     private static final Pattern NUMBER = Pattern.compile("(\\d+(?:[.,]\\d+)?)");
@@ -164,10 +174,84 @@ public final class Bean {
     }
 
     public String stars() {
+        return starsOf(rating);
+    }
+
+    static String starsOf(int rating) {
         if (rating <= 0) return "";
         StringBuilder b = new StringBuilder();
         for (int i = 1; i <= 5; i++) b.append(i <= rating ? '★' : '☆');
         return b.toString();
+    }
+
+    // ---- recipe and brews -----------------------------------------------------------------
+
+    /** Your usual way of brewing this coffee, as a Brew. */
+    public Brew recipe() {
+        Brew r = new Brew();
+        r.method = method;
+        r.brewer = brewer;
+        r.temp = temp;
+        r.grind = grind;
+        r.dose = dose;
+        r.water = water;
+        r.time = time;
+        r.extras = new LinkedHashMap<>(extras);
+        return r;
+    }
+
+    public void setRecipe(Brew r) {
+        method = r.method;
+        brewer = r.brewer;
+        temp = r.temp;
+        grind = r.grind;
+        dose = r.dose;
+        water = r.water;
+        time = r.time;
+        extras = new LinkedHashMap<>(r.extras);
+    }
+
+    public Brew findBrew(String brewId) {
+        if (brewId == null) return null;
+        for (Brew b : brews) if (b.id.equals(brewId)) return b;
+        return null;
+    }
+
+    /** Adds or replaces a brew, keeps the newest first, and dates the bag's opening if it had none. */
+    public void putBrew(Brew brew) {
+        boolean replaced = false;
+        for (int i = 0; i < brews.size(); i++) {
+            if (brews.get(i).id.equals(brew.id)) {
+                brews.set(i, brew);
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) brews.add(brew);
+        brews.sort((a, b) -> Long.compare(b.at, a.at));
+        // Your first brew is the day the bag was opened, unless you already set that day.
+        if (opened <= 0) opened = noon(date(brews.get(brews.size() - 1).at));
+    }
+
+    public void removeBrew(String brewId) {
+        brews.removeIf(b -> b.id.equals(brewId));
+    }
+
+    /** Where a new brew starts: your last brew of this bag, or else your usual recipe. */
+    public Brew startingPoint() {
+        return brews.isEmpty() ? recipe() : brews.get(0).copy();
+    }
+
+    /** Average rating of the rated brews, or 0. */
+    public double averageRating() {
+        int n = 0, sum = 0;
+        for (Brew b : brews) {
+            if (b.rating > 0) {
+                n++;
+                sum += b.rating;
+            }
+        }
+        return n == 0 ? 0 : (double) sum / n;
     }
 
     /** Origin · altitude · roaster, leaving out what is missing. */
@@ -187,6 +271,9 @@ public final class Bean {
                 + process + " " + variety + " " + producer + " " + roast + " " + notes + " "
                 + method + " " + brewer + " " + grind + " " + myNotes + " " + extras.values())
                 .toLowerCase(Locale.ROOT);
+        StringBuilder brewText = new StringBuilder();
+        for (Brew b : brews) brewText.append(' ').append(b.notes);
+        hay = hay + brewText.toString().toLowerCase(Locale.ROOT);
         for (String word : query.toLowerCase(Locale.ROOT).trim().split("\\s+")) {
             if (!word.isEmpty() && !hay.contains(word)) return false;
         }
@@ -224,6 +311,9 @@ public final class Bean {
         o.put("price", price);
         o.put("opened", opened);
         o.put("finishedOn", finishedOn);
+        JSONArray log = new JSONArray();
+        for (Brew b : brews) log.put(b.toJson());
+        o.put("brews", log);
         o.put("added", added);
         o.put("updated", updated);
         return o;
@@ -276,6 +366,14 @@ public final class Bean {
         // Bags marked finished before there were dates: take the day they were last changed.
         if (done == 0 && o.optBoolean("finished", false)) done = b.updated;
         b.setFinished(done);
+        JSONArray log = o.optJSONArray("brews");
+        if (log != null) {
+            for (int i = 0; i < log.length(); i++) {
+                JSONObject one = log.optJSONObject(i);
+                if (one != null) b.brews.add(Brew.fromJson(one));
+            }
+            b.brews.sort((x, y) -> Long.compare(y.at, x.at));
+        }
         return b;
     }
 }
