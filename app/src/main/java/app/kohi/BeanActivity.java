@@ -213,6 +213,26 @@ public class BeanActivity extends Activity {
             body.addView(Ui.text(this, "Average " + Bean.starsOf((int) Math.round(avg)) + "  "
                     + String.format(java.util.Locale.getDefault(), "%.1f", avg), 16), Ui.wide());
         }
+        String next = Advice.next(b.brews.get(0));
+        if (!next.isEmpty()) {
+            TextView t = Ui.bold(this, "Next time: " + next, 16);
+            t.setPadding(0, Ui.dp(this, 6), 0, 0);
+            body.addView(t, Ui.wide());
+        }
+        // Where the last brews landed on the taste compass, the latest one filled in.
+        java.util.List<Brew> recent = b.brews.subList(0, Math.min(10, b.brews.size()));
+        int[][] counts = Compass.counts(recent);
+        int noted = 0;
+        for (int[] row : counts) for (int n : row) noted += n;
+        if (noted >= 2) {
+            TextView h = Ui.bold(this, "Where your last brews landed", 16);
+            h.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 4));
+            body.addView(h, Ui.wide());
+            Compass.Grid grid = new Compass.Grid(this, null);
+            Brew latest = b.brews.get(0);
+            grid.show(latest.taste, latest.strength, counts);
+            body.addView(grid.view, Ui.wide());
+        }
 
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.LocalDate current = null;
@@ -274,6 +294,8 @@ public class BeanActivity extends Activity {
         String how = Bean.joinDots(Methods.amounts(r), Methods.show(r.time, m.timeUnit),
                 m.hasTemp ? r.tempLabel() : "", r.grind.isEmpty() ? "" : "grind " + r.grind);
         if (!how.isEmpty()) card.addView(Ui.oneLine(Ui.text(this, how, 15)), Ui.wide());
+        String felt = Compass.describe(r.taste, r.strength);
+        if (!felt.isEmpty()) card.addView(Ui.oneLine(Ui.bold(this, felt, 15)), Ui.wide());
         if (!r.notes.isEmpty()) card.addView(Ui.oneLine(Ui.italic(this, r.notes, 15)), Ui.wide());
         return card;
     }

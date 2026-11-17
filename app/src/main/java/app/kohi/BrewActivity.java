@@ -29,6 +29,11 @@ public class BrewActivity extends Activity {
     private DateField day;
     private EditText notes;
     private int rating = 0;
+    private String taste = "";
+    private String strength = "";
+    private Compass.Grid compass;
+    private TextView advice;
+    private EditText words;
     private boolean makeRecipe = false;
     private final List<TextView> ratingChips = new ArrayList<>();
     private TextView recipePill;
@@ -53,6 +58,9 @@ public class BrewActivity extends Activity {
         form.load(brew);
         day.set(Bean.noon(Bean.date(brew.at)));
         notes.setText(brew.notes);
+        taste = brew.taste;
+        strength = brew.strength;
+        showCompass();
         setRating(brew.rating);
         initial = snapshot();
     }
@@ -80,6 +88,14 @@ public class BrewActivity extends Activity {
                     ? "Filled in from your usual recipe. Change what you did differently."
                     : "Filled in from your last brew. Change what you did differently.", 15), Ui.wide());
         }
+        if (isNew && !bean.brews.isEmpty()) {
+            String last = Advice.next(bean.brews.get(0));
+            if (!last.isEmpty()) {
+                TextView t = Ui.bold(this, "Last time: " + last, 16);
+                t.setPadding(0, Ui.dp(this, 8), 0, 0);
+                body.addView(t, Ui.wide());
+            }
+        }
         day = new DateField(this, body, "Brewed on", false);
 
         body.addView(Ui.header(this, "How you made it"), Ui.wide());
@@ -87,6 +103,31 @@ public class BrewActivity extends Activity {
         body.addView(form.view(), Ui.wide());
 
         body.addView(Ui.header(this, "How it was"), Ui.wide());
+        body.addView(Ui.italic(this, "Tap where this cup landed. The middle is the goal.", 15), Ui.wide());
+        compass = new Compass.Grid(this, (t, s) -> {
+            boolean same = t.equals(taste) && s.equals(strength);
+            taste = same ? "" : t;
+            strength = same ? "" : s;
+            showCompass();
+        });
+        LinearLayout.LayoutParams compassLp = Ui.wide();
+        compassLp.topMargin = Ui.dp(this, 8);
+        body.addView(compass.view, compassLp);
+        words = Form.labeled(this, body, "Or say it in a word", Ui.field(this, "e.g. lemony, watery, dry"));
+        words.addTextChangedListener(Form.after(() -> {
+            String[] found = Compass.lookup(Form.val(words));
+            if (found[0].isEmpty() && found[1].isEmpty()) return;
+            if (!found[0].isEmpty()) taste = found[0];
+            if (!found[1].isEmpty()) strength = found[1];
+            showCompass();
+        }));
+        advice = Ui.bold(this, "", 16);
+        advice.setPadding(0, Ui.dp(this, 10), 0, 0);
+        body.addView(advice, Ui.wide());
+        TextView foot = Ui.italic(this, Compass.FOOTNOTE, 14);
+        foot.setPadding(0, Ui.dp(this, 6), 0, 0);
+        body.addView(foot, Ui.wide());
+
         Form.label(this, body, "Rating");
         LinearLayout ratingRow = Ui.row(this);
         for (int i = 1; i <= 5; i++) {
@@ -131,6 +172,17 @@ public class BrewActivity extends Activity {
         for (int i = 0; i < ratingChips.size(); i++) Ui.setPill(this, ratingChips.get(i), i + 1 == r);
     }
 
+    private void showCompass() {
+        compass.show(taste, strength, null);
+        Brew probe = new Brew();
+        form.into(probe);
+        probe.taste = taste;
+        probe.strength = strength;
+        String next = Advice.next(probe);
+        advice.setText(next.isEmpty() ? "" : "Next time: " + next);
+        advice.setVisibility(next.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+    }
+
     private void setMakeRecipe(boolean on) {
         makeRecipe = on;
         recipePill.setText(on ? "✓ Also my usual recipe from now on" : "Also make this my usual recipe");
@@ -139,7 +191,7 @@ public class BrewActivity extends Activity {
 
     private String snapshot() {
         return form.snapshot() + '\u0001' + day.value + '\u0001' + rating + '\u0001'
-                + Form.val(notes) + '\u0001' + makeRecipe;
+                + Form.val(notes) + '\u0001' + makeRecipe + '\u0001' + taste + '\u0001' + strength;
     }
 
     /** The chosen day, at the time of day the brew was logged (now, for a new one). */
@@ -154,6 +206,8 @@ public class BrewActivity extends Activity {
         brew.at = when();
         brew.rating = rating;
         brew.notes = Form.val(notes);
+        brew.taste = taste;
+        brew.strength = strength;
         if (!brew.source.isEmpty() && !snapshot().equals(initial)) brew.editedHere = true;
         bean.putBrew(brew);
         if (makeRecipe) bean.setRecipe(brew.copy());

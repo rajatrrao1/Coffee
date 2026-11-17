@@ -28,6 +28,8 @@ public final class Brew {
 
     public int rating = 0;      // 0 = not rated, else 1..5
     public String notes = "";
+    public String taste = "";       // "Sour", "Balanced" or "Bitter" (the taste compass)
+    public String strength = "";    // "Weak", "Just right" or "Strong"
 
     // Brews that came from another app (Two Tone): where from, its own id there, the exact
     // entry as last read (to notice changes made there), and whether you changed it here.
@@ -82,6 +84,8 @@ public final class Brew {
         o.put("extras", ex);
         o.put("rating", rating);
         o.put("notes", notes);
+        if (!taste.isEmpty()) o.put("taste", taste);
+        if (!strength.isEmpty()) o.put("strength", strength);
         if (!source.isEmpty()) {
             o.put("source", source);
             o.put("sourceId", sourceId);
@@ -114,6 +118,8 @@ public final class Brew {
         }
         b.rating = Math.max(0, Math.min(5, o.optInt("rating", 0)));
         b.notes = o.optString("notes", "");
+        b.taste = o.optString("taste", "");
+        b.strength = o.optString("strength", "");
         b.source = o.optString("source", "");
         b.sourceId = o.optString("sourceId", "");
         b.sourceStamp = o.optString("sourceStamp", "");
