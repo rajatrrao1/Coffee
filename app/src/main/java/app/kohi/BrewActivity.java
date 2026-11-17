@@ -34,6 +34,7 @@ public class BrewActivity extends Activity {
     private Compass.Grid compass;
     private TextView advice;
     private EditText words;
+    private TextView foot;
     private boolean makeRecipe = false;
     private final List<TextView> ratingChips = new ArrayList<>();
     private TextView recipePill;
@@ -124,7 +125,7 @@ public class BrewActivity extends Activity {
         advice = Ui.bold(this, "", 16);
         advice.setPadding(0, Ui.dp(this, 10), 0, 0);
         body.addView(advice, Ui.wide());
-        TextView foot = Ui.italic(this, Compass.FOOTNOTE, 14);
+        foot = Ui.italic(this, Compass.FOOTNOTE, 14);
         foot.setPadding(0, Ui.dp(this, 6), 0, 0);
         body.addView(foot, Ui.wide());
 
@@ -181,6 +182,7 @@ public class BrewActivity extends Activity {
         String next = Advice.next(probe);
         advice.setText(next.isEmpty() ? "" : "Next time: " + next);
         advice.setVisibility(next.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+        foot.setText(probe.method.equals(Methods.ESPRESSO.name) ? Compass.ESPRESSO_NOTE : Compass.FOOTNOTE);
     }
 
     private void setMakeRecipe(boolean on) {

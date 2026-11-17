@@ -10,6 +10,7 @@ final class Advice {
     private Advice() {}
 
     static String next(Brew b) {
+        if (b.method.equals(Methods.ESPRESSO.name)) return espresso(b);
         StringBuilder out = new StringBuilder();
         switch (b.taste) {
             case "Sour": add(out, drawMore(b)); break;
@@ -21,6 +22,39 @@ final class Advice {
         else if (b.strength.equals("Strong")) add(out, weaker(b));
         if (out.length() == 0 && b.taste.equals("Balanced")) return "Tasted right: keep these settings.";
         return out.toString();
+    }
+
+    // ---- espresso ----------------------------------------------------------------------------
+    // On the espresso compass the ratio is the main lever: a longer shot (more in the cup) is
+    // weaker and more extracted, a shorter one stronger and less extracted. The grind moves the
+    // shot to another line, but finer only helps up to a point. After Barista Hustle's Espresso Compass.
+
+    private static String espresso(Brew b) {
+        String t = b.taste, s = b.strength;
+        Double secs = seconds(b.time);
+        double r = ratio(b);
+        String longer = r > 0 ? " (about 1:" + Methods.number(r + 0.5) + ")" : "";
+        String shorter = r > 0 ? " (about 1:" + Methods.number(Math.max(1, r - 0.5)) + ")" : "";
+        if (t.equals("Sour") && secs != null && secs >= 32) {
+            return "Sour even though it ran long: grinding finer will not help. Pull a longer shot" + longer
+                    + ", or use hotter water.";
+        }
+        if (t.equals("Bitter") && secs != null && secs <= 22) {
+            return "Bitter even though it ran fast: the water is likely finding a way through the puck. "
+                    + "Spread and tamp more evenly, then try slightly cooler water.";
+        }
+        switch (t + "|" + s) {
+            case "Sour|Strong": return "Sour and heavy: pull a longer shot" + longer + ". More water through the puck draws out more and thins it.";
+            case "Sour|Just right": case "Sour|": return "Sour: grind a little finer. If finer starts to taste worse, go back and pull a slightly longer shot instead.";
+            case "Sour|Weak": return "Sour and thin: grind finer, or use a gram more coffee, at the same ratio.";
+            case "Balanced|Strong": case "|Strong": return "Heavy: pull a longer shot" + longer + ". If it turns bitter, grind a touch coarser.";
+            case "Balanced|Weak": case "|Weak": return "Thin: pull a shorter shot" + shorter + ". If it turns sour, grind a touch finer.";
+            case "Bitter|Strong": return "Bitter and harsh: grind coarser, at the same ratio.";
+            case "Bitter|Just right": case "Bitter|": return "Bitter: grind a little coarser, or pull a slightly shorter shot.";
+            case "Bitter|Weak": return "Bitter and hollow: pull a shorter shot" + shorter + ".";
+            case "Balanced|Just right": case "Balanced|": case "|Just right": return "Tasted right: keep these settings.";
+            default: return timing(b);
+        }
     }
 
     private static void add(StringBuilder out, String s) {

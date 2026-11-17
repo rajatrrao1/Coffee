@@ -33,6 +33,11 @@ final class Compass {
     static final String FOOTNOTE = "If a fault stays after a few changes, it may come from the beans "
             + "or the roast rather than from how you brewed.";
 
+    static final String ESPRESSO_NOTE = "Espresso: a longer shot (more in the cup) is weaker and more "
+            + "extracted; a shorter one stronger and less extracted. Grinding finer helps only up to a "
+            + "point. Sour and bitter at once usually means the water ran unevenly through the puck: "
+            + "spread and tamp more evenly before changing the grind.";
+
     // Words you might use for a cup, and where they point. "" leaves that axis as it is.
     private static final String[][] LOOKUP = {
             // word, taste, strength
